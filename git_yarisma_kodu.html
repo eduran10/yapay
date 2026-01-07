@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kim Git Uzmanı Olmak İster?</title>
+    <style>
+        body {
+            background-color: #020b20;
+            color: white;
+            font-family: 'Verdana', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #game-container {
+            width: 90%;
+            max-width: 1000px;
+            display: grid;
+            grid-template-columns: 3fr 1fr;
+            gap: 20px;
+        }
+
+        /* Sol Taraf: Soru ve Cevaplar */
+        #main-area {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        #question-box {
+            background: linear-gradient(#103680, #030f2b);
+            border: 2px solid #fff;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            font-size: 1.5rem;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            box-shadow: 0 0 20px rgba(0, 100, 255, 0.5);
+        }
+
+        #answers-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .answer-btn {
+            background: linear-gradient(#001f5f, #000);
+            border: 2px solid #666;
+            border-radius: 30px;
+            padding: 15px;
+            color: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+            text-align: left;
+            position: relative;
+            transition: all 0.3s;
+        }
+
+        .answer-btn:hover {
+            background: linear-gradient(#0044cc, #001f5f);
+            border-color: #ffaa00;
+        }
+
+        .answer-btn.correct {
+            background: linear-gradient(#00b300, #004d00);
+            animation: blink 0.5s 3;
+        }
+
+        .answer-btn.wrong {
+            background: linear-gradient(#cc0000, #4d0000);
+        }
+
+        .answer-btn span {
+            color: #ffaa00;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        /* Sağ Taraf: Para Ağacı ve Jokerler */
+        #sidebar {
+            background: #000;
+            border: 2px solid #444;
+            padding: 10px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        #money-ladder {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            text-align: right;
+        }
+
+        #money-ladder li {
+            padding: 5px 10px;
+            color: #ffaa00;
+            font-weight: bold;
+        }
+
+        #money-ladder li.active {
+            background-color: #ffaa00;
+            color: black;
+            border-radius: 5px;
+        }
+
+        #money-ladder li.safe {
+            color: white;
+        }
+
+        #lifelines {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+
+        .lifeline-btn {
+            width: 60px;
+            height: 40px;
+            border-radius: 50%; /* Oval */
+            border: 2px solid white;
+            background: #000;
+            color: white;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lifeline-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+            text-decoration: line-through;
+            border-color: red;
+        }
+
+        #modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        #modal h2 { color: #ffaa00; }
+        #modal p { font-size: 1.5rem; text-align: center; max-width: 600px; }
+        #next-btn, #restart-btn {
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            background: #ffaa00;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+            border-radius: 10px;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        @media (max-width: 768px) {
+            #game-container { grid-template-columns: 1fr; }
+            #sidebar { flex-direction: row-reverse; align-items: center; }
+            #money-ladder { display: none; } /* Mobilde listeyi gizle */
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="main-area">
+        <div id="question-box">
+            Sorular Yükleniyor...
+        </div>
+        <div id="answers-box">
+            <button class="answer-btn" onclick="checkAnswer(0)"><span>A:</span> ...</button>
+            <button class="answer-btn" onclick="checkAnswer(1)"><span>B:</span> ...</button>
+            <button class="answer-btn" onclick="checkAnswer(2)"><span>C:</span> ...</button>
+            <button class="answer-btn" onclick="checkAnswer(3)"><span>D:</span> ...</button>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <div id="lifelines">
+            <button class="lifeline-btn" id="joker-50" onclick="use5050()">50:50</button>
+            <button class="lifeline-btn" id="joker-phone" onclick="usePhone()">Tel</button>
+            <button class="lifeline-btn" id="joker-audience" onclick="useAudience()">Seyirci</button>
+        </div>
+        <ul id="money-ladder">
+            </ul>
+    </div>
+</div>
+
+<div id="modal">
+    <h2 id="modal-title">Mesaj</h2>
+    <p id="modal-msg">İçerik</p>
+    <button id="next-btn" onclick="nextQuestion()">Sıradaki Soru</button>
+    <button id="restart-btn" onclick="restartGame()" style="display:none">Yeniden Oyna</button>
+</div>
+
+<script>
+    // --- OYUN VERİSİ (ProGit Kitabına Göre) ---
+    const questions = [
+        {
+            text: "Mevcut bir proje klasörünü Git ile sürüm kontrolü altına almak (yeni bir depo/repository oluşturmak) için terminale hangi komutu yazmalısınız?",
+            options: ["git start", "git init", "git create", "git new"],
+            correct: 1, // B
+            money: "1.000 TL"
+        },
+        {
+            text: "Değişiklik yaptığınız bir dosyayı, bir sonraki kayıt işlemine (commit) dahil etmek için 'hazırlama alanına' (staging area) ekleyen komut hangisidir?",
+            options: ["git add", "git push", "git stage", "git move"],
+            correct: 0, // A
+            money: "2.000 TL"
+        },
+        {
+            text: "Hazırlama alanındaki (staged) dosyaların o anki durumunun bir görüntüsünü (snapshot) alıp kalıcı olarak veritabanına kaydetmek için hangi komut kullanılır?",
+            options: ["git save", "git record", "git upload", "git commit"],
+            correct: 3, // D
+            money: "3.000 TL"
+        },
+        {
+            text: "Yerel bilgisayarınızda yaptığınız commit'leri, GitHub gibi uzak bir sunucudaki depoya göndermek için hangi komutu kullanırsınız?",
+            options: ["git fetch", "git pull", "git push", "git remote"],
+            correct: 2, // C
+            money: "5.000 TL"
+        },
+        {
+            text: "'git rm' komutu bir dosya üzerinde kullanıldığında aşağıdakilerden hangisi gerçekleşir?",
+            options: ["Sadece takipten çıkar, dosya kalır", "Hem silinir hem stage edilir", "Sadece çöp kutusuna gider", "Sıkıştırılarak arşivlenir"],
+            correct: 1, // B
+            money: "7.500 TL"
+        },
+        {
+            text: "'git pull' komutu çalıştırıldığında, arka planda sırasıyla hangi iki temel Git komutu gerçekleşir?",
+            options: ["clone ve init", "push ve log", "fetch ve merge", "add ve commit"],
+            correct: 2, // C
+            money: "15.000 TL"
+        },
+        {
+            text: "'git fetch' komutu ile 'git pull' arasındaki temel fark nedir?",
+            options: ["Fetch kodu değiştirmez (Güvenli)", "Fetch sadece GitHub'da çalışır", "Fetch dosyaları siler", "Fark yoktur"],
+            correct: 0, // A
+            money: "30.000 TL"
+        },
+        {
+            text: "GitHub'da başka bir kullanıcının projesine katkıda bulunmak için o projenin kopyasını kendi hesabınıza alma işlemine ne ad verilir?",
+            options: ["Clone", "Branch", "Merge", "Fork"],
+            correct: 3, // D
+            money: "60.000 TL"
+        },
+        {
+            text: "Git mimarisindeki üç ana durumdan (The Three States) biri aşağıdakilerden hangisi DEĞİLDİR?",
+            options: ["Committed (İşlenmiş)", "Modified (Değiştirilmiş)", "Staged (Hazırlanmış)", "Archived (Arşivlenmiş)"],
+            correct: 3, // D
+            money: "125.000 TL"
+        },
+        {
+            text: "Git terminolojisinde 'HEAD' tam olarak neyi ifade eder?",
+            options: ["İlk (Root) Commit", "Aktif dalın son commit işaretçisi", "Uzak sunucu (Remote)", ".gitignore dosyası"],
+            correct: 1, // B
+            money: "500.000 TL"
+        }
+    ];
+
+    let currentQIndex = 0;
+    let isAnswered = false;
+
+    // --- DOM ELEMENTLERİ ---
+    const questionBox = document.getElementById("question-box");
+    const answerBtns = document.querySelectorAll(".answer-btn");
+    const moneyList = document.getElementById("money-ladder");
+    const modal = document.getElementById("modal");
+    const modalTitle = document.getElementById("modal-title");
+    const modalMsg = document.getElementById("modal-msg");
+    const nextBtn = document.getElementById("next-btn");
+    const restartBtn = document.getElementById("restart-btn");
+
+    // --- BAŞLANGIÇ ---
+    function initGame() {
+        // Para listesini oluştur (Ters sıra)
+        moneyList.innerHTML = "";
+        [...questions].reverse().forEach((q, index) => {
+            let li = document.createElement("li");
+            li.innerText = q.money;
+            li.id = "money-" + (questions.length - 1 - index);
+            moneyList.appendChild(li);
+        });
+
+        currentQIndex = 0;
+        loadQuestion();
+    }
+
+    function loadQuestion() {
+        isAnswered = false;
+        const q = questions[currentQIndex];
+        
+        // Soruyu yaz
+        questionBox.innerText = q.text;
+
+        // Şıkları yaz ve resetle
+        answerBtns.forEach((btn, index) => {
+            btn.innerHTML = `<span>${String.fromCharCode(65+index)}:</span> ${q.options[index]}`;
+            btn.className = "answer-btn"; // Stil sıfırla
+            btn.style.display = "block"; // 50:50 sonrası geri getir
+            btn.disabled = false;
+        });
+
+        // Para ağacını güncelle
+        document.querySelectorAll("#money-ladder li").forEach(li => li.classList.remove("active"));
+        document.getElementById("money-" + currentQIndex).classList.add("active");
+    }
+
+    function checkAnswer(selectedIndex) {
+        if (isAnswered) return;
+        isAnswered = true;
+
+        const q = questions[currentQIndex];
+        const correctIndex = q.correct;
+
+        if (selectedIndex === correctIndex) {
+            // DOĞRU CEVAP
+            answerBtns[selectedIndex].classList.add("correct");
+            setTimeout(() => {
+                showModal("TEBRİKLER!", `Kazandığınız Tutar: ${q.money}`, false);
+            }, 1000);
+        } else {
+            // YANLIŞ CEVAP
+            answerBtns[selectedIndex].classList.add("wrong");
+            answerBtns[correctIndex].classList.add("correct"); // Doğruyu göster
+            setTimeout(() => {
+                showModal("ELENDİNİZ...", `Doğru cevap ${String.fromCharCode(65+correctIndex)} şıkkıydı.`, true);
+            }, 1500);
+        }
+    }
+
+    function showModal(title, msg, isGameOver) {
+        modal.style.display = "flex";
+        modalTitle.innerText = title;
+        modalMsg.innerText = msg;
+
+        if (isGameOver) {
+            nextBtn.style.display = "none";
+            restartBtn.style.display = "block";
+        } else if (currentQIndex === questions.length - 1) {
+            modalTitle.innerText = "MİLYONER OLDUNUZ!";
+            modalMsg.innerText = "Git Uzmanı unvanını ve 500.000 TL'yi kazandınız!";
+            nextBtn.style.display = "none";
+            restartBtn.style.display = "block";
+        } else {
+            nextBtn.style.display = "block";
+            restartBtn.style.display = "none";
+        }
+    }
+
+    function nextQuestion() {
+        modal.style.display = "none";
+        currentQIndex++;
+        loadQuestion();
+    }
+
+    function restartGame() {
+        modal.style.display = "none";
+        // Jokerleri resetle
+        document.getElementById("joker-50").disabled = false;
+        document.getElementById("joker-phone").disabled = false;
+        document.getElementById("joker-audience").disabled = false;
+        initGame();
+    }
+
+    // --- JOKERLER ---
+    
+    function use5050() {
+        const btn = document.getElementById("joker-50");
+        if(btn.disabled || isAnswered) return;
+        btn.disabled = true;
+
+        const q = questions[currentQIndex];
+        let removed = 0;
+        let indexesToCheck = [0, 1, 2, 3];
+        
+        // Doğru cevabı listeden çıkar
+        indexesToCheck.splice(q.correct, 1);
+
+        // Rastgele 2 yanlış şıkkı sil
+        while (removed < 2) {
+            const random = Math.floor(Math.random() * indexesToCheck.length);
+            const indexToRemove = indexesToCheck[random];
+            answerBtns[indexToRemove].style.display = "none"; // Gizle
+            indexesToCheck.splice(random, 1);
+            removed++;
+        }
+    }
+
+    function usePhone() {
+        const btn = document.getElementById("joker-phone");
+        if(btn.disabled || isAnswered) return;
+        btn.disabled = true;
+
+        const q = questions[currentQIndex];
+        const correctChar = String.fromCharCode(65 + q.correct);
+        
+        alert(`📞 TELEFON JOKERİ (Kıdemli Yazılımcı Arkadaşın):\n\n"Hmm, Pro Git kitabında okumuştum bunu... Kesinlikle ${correctChar} şıkkı olması lazım dostum. Ona güvenebilirsin."`);
+    }
+
+    function useAudience() {
+        const btn = document.getElementById("joker-audience");
+        if(btn.disabled || isAnswered) return;
+        btn.disabled = true;
+
+        const q = questions[currentQIndex];
+        const correctIndex = q.correct;
+        
+        // Basit bir seyirci simülasyonu (Doğru şıkka %70 verir)
+        let stats = [10, 10, 10, 10];
+        stats[correctIndex] = 70;
+        
+        // Kalan %30'u diğerlerine dağıt (basitçe)
+        
+        alert(`📊 SEYİRCİ SONUÇLARI:\n\nA: %${stats[0]}\nB: %${stats[1]}\nC: %${stats[2]}\nD: %${stats[3]}\n\n(Seyirci genelde haklıdır!)`);
+    }
+
+    // Oyunu başlat
+    initGame();
+
+</script>
+</body>
+</html>
